@@ -17,8 +17,18 @@ void g2(long a) {
   if (a%10 == 5) {more_inner(a); printf("x2\n"); return;}
 }
 
+struct c1_t {
+  c1_t() {
+  }
+  void t1() {
+    printf("in method\n");
+  }
+};
+
 int main()
 {
+  c1_t c;
+  c.t1();
   g2(time(NULL));
   for (int i=0; i<10; i++)
     printf("this is test\n");

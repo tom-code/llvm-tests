@@ -36,47 +36,45 @@ struct p1_t : public ModulePass {
     printf("running pass on module %s\n", mod.getModuleIdentifier().c_str());
 
 
-    Constant *hookc  = mod.getOrInsertFunction("print", Type::getVoidTy(mod.getContext()), Type::getInt8PtrTy(mod.getContext()));
-    Function *hook = cast<Function>(hookc);
+    Constant *print_c  = mod.getOrInsertFunction("print", Type::getVoidTy(mod.getContext()), Type::getInt8PtrTy(mod.getContext()));
+    Function *print_func = cast<Function>(print_c);
 
 
     IRBuilder<> builder(mod.getContext());
 
- 
     for (auto &fun : mod) {
       if (fun.isIntrinsic()) continue;
-      
       if (fun.isDeclaration()) continue;
       if (fun.getName() == "print") continue;
 
       printf("  processing function %s\n", fun.getName());
 
+      //insert string with enter and leave message into IR
       char message[128];
-      
-      builder.SetInsertPoint(&(*fun.begin()));
+      builder.SetInsertPoint(&*fun.begin());
       sprintf(message, "<enter> %s", demangle(fun.getName()).c_str());
       Value *msg = builder.CreateGlobalStringPtr(message);
-
       sprintf(message, "<leave> %s", demangle(fun.getName()).c_str());
       Value *msg_leave = builder.CreateGlobalStringPtr(message);
 
-      {
+      { // insert print at begin of function
         std::vector<Value *> args;
         args.push_back(msg);
-        ArrayRef<Value *> argsRef(args);
-        Instruction *inst = CallInst::Create(hook, argsRef);
-        fun.begin()->getInstList().insert(fun.begin()->begin(), inst);
+        ArrayRef<Value *> args_ref(args);
+        Instruction *inst_print = CallInst::Create(print_func, args_ref);
+
+        fun.begin()->getInstList().insert(fun.begin()->begin(), inst_print);
       }
 
-      for (inst_iterator I = inst_begin(fun), E = inst_end(fun); I != E; ++I) {
-        if (strcmp(I->getOpcodeName(), "ret") == 0) {
+      //find all "ret" instructions and insert print just before them
+      for (inst_iterator inst = inst_begin(fun), E = inst_end(fun); inst != E; ++inst) {
+        if (strcmp(inst->getOpcodeName(), "ret") == 0) {
           std::vector<Value *> args;
           args.push_back(msg_leave);
-          ArrayRef<Value *> argsRef(args);
-          Instruction *inst = CallInst::Create(hook, argsRef);
+          ArrayRef<Value *> args_ref(args);
+          Instruction *inst_print = CallInst::Create(print_func, args_ref);
 
-          inst->insertBefore(&*I);
-
+          inst_print->insertBefore(&*inst);
         }
         //printf(">> %s\n", I->getOpcodeName());
         //errs() << *I << "\n";
@@ -89,13 +87,12 @@ struct p1_t : public ModulePass {
 
 };
 
-
 char p1_t::ID = 0;
 //static RegisterPass<p1_t> p1("p1", "p1",false);
 
 
-static void regmy(const PassManagerBuilder &, legacy::PassManagerBase &PM) {
+static void regme(const PassManagerBuilder &, legacy::PassManagerBase &PM) {
   PM.add(new p1_t());
 }
-static RegisterStandardPasses reg(PassManagerBuilder::EP_ModuleOptimizerEarly, regmy);
+static RegisterStandardPasses reg(PassManagerBuilder::EP_ModuleOptimizerEarly, regme);
 
