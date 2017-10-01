@@ -76,7 +76,7 @@ int main() {
 
   optimize(module);
   //dump parsed and optimized module
-  errs() << *(module.get());
+  //errs() << *(module.get());
 
   if (verifyModule(*(module.get()))) {
     errs() <<  ": verify module failed\n";
@@ -84,16 +84,18 @@ int main() {
   }
 
   auto Resolver = orc::createLambdaResolverX(
-                      [&](const std::string &Name) {
-                        printf("sumbol %s\n", Name.c_str());
+                      [&](const std::string &name) {
+                        printf("symbol %s\n", name.c_str());
                         return nullptr;
                       },
-                      [](const std::string &S) {
-                        printf("sumbol2 %s\n", S.c_str());
+                      [](const std::string &symbol) {
+                        printf("resolving symbol: %s\n", symbol.c_str());
                         //if (auto SymAddr = RTDyldMemoryManager::getSymbolAddressInProcess(S))
                         //  return JITSymbol(SymAddr, JITSymbolFlags::Exported);
                         //return JITSymbol(nullptr);
-                        return JITSymbol((unsigned long)(void*)&printer, JITSymbolFlags::Exported);
+                        if (symbol == "puts")
+                          return JITSymbol((unsigned long)(void*)&printer, JITSymbolFlags::Exported);
+                        return JITSymbol(nullptr);
                       });
 
 
@@ -101,6 +103,7 @@ int main() {
   std::string errStr;
   ExecutionEngine *EE =
     EngineBuilder(std::move(module))
+    .setEngineKind(EngineKind::JIT)
     .setErrorStr(&errStr)
     .setSymbolResolver(std::move(Resolver))
     .create();
