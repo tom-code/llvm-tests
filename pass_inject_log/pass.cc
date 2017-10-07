@@ -25,10 +25,9 @@ struct p1_t : public ModulePass {
   }
 
   std::string demangle(std::string in) {
-    std::string out = in;
     int status;
     const char *n = abi::__cxa_demangle(in.c_str(), 0, 0, &status);
-    if (status != 0) return out;
+    if (status != 0) return in;
     return n;
   }
 

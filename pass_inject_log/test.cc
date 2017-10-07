@@ -2,14 +2,12 @@
 #include <stdio.h>
 #include <time.h>
 
-//extern "C" void print(void) {
-//  printf("p1\n");
-//}
 
 int global_number = 10;
 
+
+//test we put traces also for functions which are optimized out
 void more_inner(int a) {
-  //printf("%d\n", a);
 }
 
 void g2(long a) {
